@@ -100,7 +100,7 @@ def main():
   fig.tight_layout()
   #plt.show()
   plt.draw()
-  plt.savefig(f'lyk/output/fl1-4-table-{utils.safe_key_string(model_dir)}.png', dpi=200)
+  plt.savefig(f'lyk/output/img/fl1-4-table-{utils.safe_key_string(model_dir)}.png', dpi=200)
 
 # * dictionary의 모든 value를 list로 변환
 def extract_values(nested_dict):
