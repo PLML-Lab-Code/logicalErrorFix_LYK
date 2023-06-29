@@ -35,10 +35,10 @@ import sys
 import utils
 
 # epoch 3 6 10 14 28
-lang = 'cpp_refined_fl2/{}'
+lang = 'cpp_refined_fl/epoch_{}'
 epochs = [3, 6, 10, 14, 28]
 lr = 5e-5
-# batch_size = 13 # utils.get_epoch(train_steps, train_examples=100000, wanted_epoch)
+# batch_size = 13 # utils.get_epoch(train_steps, train_examples, wanted_epoch)
 beam_size = 10
 source_length = 512
 target_length = 64
@@ -59,7 +59,7 @@ def main():
   print(f'📚 train_examples: {train_examples}')
 
   # tqdm for epochs
-  for epoch in tqdm(epochs, desc='⏳ Processing epochs'):
+  for epoch in tqdm(epochs, desc='⏳ Epochs'):
     try:
       # output dir
       output_dir_epoch = output_dir.format(epoch)
@@ -95,9 +95,12 @@ def main():
         raise Exception(f'❌ Process failed on epoch {epoch}')
 
     except Exception as e:
-      print('💥 Unexpected error occurred')
+      print(f'💥 Unexpected error occurred on epoch {epoch}')
+      print(sys.exc_info()[0])
       print(e)
-      break
+      continue
+
+  print(f'✅ Done')
 
 if __name__ == '__main__':
   main()

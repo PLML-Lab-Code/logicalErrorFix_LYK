@@ -6,13 +6,14 @@ import logging
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import utils
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--model_dir', type=str, default='model/cpp_refined',
+  parser.add_argument('--model_dir', type=str, default='model/cpp_refined_fl',
     help='모델 경로')
   parser.add_argument('--epochs', type=str, nargs='+', default=['epoch_3', 'epoch_6', 'epoch_10', 'epoch_14', 'epoch_28'],
     help='평가할 모델 epoch 폴더 이름들(ex. "--epochs epoch_3 epoch_6 ...")')
@@ -20,9 +21,9 @@ def main():
     help='평가할 epoch의 세부 평가 지표')
   parser.add_argument('--datasets', type=str, nargs='+', default=['fl1-test', 'fl1-valid'],
     help='평가할 데이터셋 이름들(ex. "--datasets test_0 valid_0 ...")')
-  parser.add_argument('--beam_size', type=int, default=100,
-    help='몇 개의 예측을 평가 할 것인지')
-  parser.add_argument('--top', type=int, nargs='+', default=[1, 8, 16, 32, 64, 100],
+  parser.add_argument('--beam_size', type=int, default=10,
+    help='몇 개의 예측을 평가 할 것인지(예측에 사용한 eval 스크립트와 값이 일치해야함)')
+  parser.add_argument('--top', type=int, nargs='+', default=[1, 2, 4, 8, 10],
     help='beam_size 중 몇 번째 예측까지 비교할 것인지')
   args = parser.parse_args()
   logger.info(args)
@@ -33,6 +34,8 @@ def main():
   datasets = args.datasets
   beam_size = args.beam_size
   top = args.top
+  # 최빈값 사용 여부
+  use_most = False
   
 
   # result dictionary
@@ -55,7 +58,7 @@ def main():
           logger.info('epoch: %s, detail: %s, dataset: %s, top: %d' % (epoch, detail, dataset, t))
         
           dir = os.path.join(model_dir, epoch, detail, dataset)
-          accr = eval_localization_precision2(dir, t, beam_size)
+          accr = eval_localization_precision2(dir, t, beam_size, use_most=use_most)
           # 정확도 출력
           logger.info('accr: %f' % (accr))
           # result map에 저장
@@ -97,7 +100,7 @@ def main():
   fig.tight_layout()
   #plt.show()
   plt.draw()
-  plt.savefig('lyk/output/fl1-4-table.png', dpi=200)
+  plt.savefig(f'lyk/output/fl1-4-table-{utils.safe_key_string(model_dir)}.png', dpi=200)
 
 # * dictionary의 모든 value를 list로 변환
 def extract_values(nested_dict):
@@ -161,7 +164,7 @@ def eval_localization_precision(dir, top, beam_size):
 # beam_size: 몇개의 예측까지 평가할 것인지 (number)
 #
 # return: 라인 넘버 예측 정확도 (number 0~1)
-def eval_localization_precision2(dir, top, beam_size):
+def eval_localization_precision2(dir, top, beam_size, use_most=False):
   # * top이 beam_size보다 크면 에러
   if (top > beam_size):
     logger.error('top is bigger than beam_size - top: %d, beam_size: %d' % (top, beam_size))
@@ -197,13 +200,19 @@ def eval_localization_precision2(dir, top, beam_size):
         output_line = output_lines[o_idx]
         output_line_no = output_line.split('\t', 1)[1].split(' ', 1)[0]
         output_line_nos.append(output_line_no)
+        if not use_most:
+          # 정답과 예측이 같으면 localization + 1
+          if (gold_line_no == output_line_no):
+            localization += 1
+            break
       
-      # 가장 자주 나온 라인 번호
-      output_line_no_most = max(set(output_line_nos), key=output_line_nos.count)
+      if use_most:
+        # 가장 자주 나온 라인 번호
+        output_line_no_most = max(set(output_line_nos), key=output_line_nos.count)
 
-      # 정답과 예측이 같으면 localization + 1
-      if (gold_line_no == output_line_no_most):
-        localization += 1
+        # 정답과 예측이 같으면 localization + 1
+        if (gold_line_no == output_line_no_most):
+          localization += 1
 
     # 정답과 예측이 같은 비율
     # ! TOP 이 반영 여부 체크 필요?
