@@ -22,7 +22,7 @@ mv logicalErrorFix_LYK lyk
 ### 1. `mdcpp1` (Make Data CPP)
 1. `mdcpp1-1-convert_riegeli2cpp.py` - Riegeli 를 이용해 대회파일에서 CPP 파일과 데이터만 출력하기
   - Input File: `/tmp/dm-code_contests/*` (대회 파일, 93suhwan/logicalErrorFix 확인 할 것)
-  - Output File: `data/[cppfiles_batch_[correct,incorrect]_[test,train,valid],descriptions,samples,generated_samples]`
+  - Output File: `data/[cppfiles_batch_[correct,incorrect]_[test,train,valid],descriptions,samples,private_samples,generated_samples]`
   - Diff: FS 병목을 해소하기 위해, `93suhwan/logicalErrorFix/convert-riegeli2cpp.py` 의 출력을 `data/cppfiles_batch_[correct,incorrect]_[test,train,valid]/[problem_id].txt` 파일에 다음과 같은 식으로 시리얼라이즈함 `\n¶¶¶\n[id]\n¶¶\n[code]\n¶¶¶\n[id]\n¶¶\n[code] ...`
 
 *****BROKEN PIPE: unavailable `data/edit_distance/pair_solution_[test,train,valid].txt` (need request to JSH)*****

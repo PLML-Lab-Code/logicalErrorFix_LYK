@@ -28,6 +28,7 @@ def make_cpp_files(filenames, fileType):
   p_cpp_incorrect_batch = os.path.join(DIR, 'cppfiles_batch' + CODE_TYPE[1] + fileType)
   p_desc = os.path.join(DIR, 'descriptions' + fileType)
   p_sample = os.path.join(DIR, 'samples' + fileType)
+  p_private_sample = os.path.join(DIR, 'private_samples' + fileType)
   p_generated_sample = os.path.join(DIR, 'generated_samples' + fileType)
 
   if not os.path.exists(p_cpp_correct_batch):
@@ -41,6 +42,9 @@ def make_cpp_files(filenames, fileType):
 
   if not os.path.exists(p_sample):
     os.makedirs(p_sample)
+
+  if not os.path.exists(p_private_sample):
+    os.makedirs(p_private_sample)
 
   if not os.path.exists(p_generated_sample):
     os.makedirs(p_generated_sample)
@@ -78,6 +82,11 @@ def make_cpp_files(filenames, fileType):
     p_sample_file = os.path.join(p_sample, str(program_id) + '.txt')
     with open(p_sample_file, 'w') as sampleFile:
       sampleFile.write(str(problem.public_tests))
+  
+    # Private sample export
+    p_private_sample_file = os.path.join(p_private_sample, str(program_id) + '.txt')
+    with open(p_private_sample_file, 'w') as privateSampleFile:
+      privateSampleFile.write(str(problem.private_tests))
 
     # Generated sample export
     p_generated_sample_file = os.path.join(p_generated_sample, str(program_id) + '.txt')
