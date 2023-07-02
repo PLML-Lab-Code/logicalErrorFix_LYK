@@ -12,11 +12,20 @@ class Sqlite3Db:
 
     self._db_file = db_file
 
+  def close(self, commit: bool = True):
+    if hasattr(self, 'conn'):
+      if commit:
+        try:
+          self.conn.commit()
+        except:
+          pass
+      self.conn.close()
+
   def __del__(self):
-    self.conn.close()
+    self.close()
 
   @staticmethod
-  def ensure_safe_key_string(key: str) => str:
+  def ensure_safe_key_string(key: str) -> str:
     return re.sub(r'[^a-zA-Z0-9_]', '_', key)
 
   def table_list(self) -> List[str]:
@@ -61,6 +70,7 @@ class Sqlite3Db:
           cur.close()
           raise e
 
+# Abstract class for sqlite3 table
 class Sqlite3Table:
   def __init__(self, sqlite3db: Sqlite3Db, table_name: str):
     self.max_retry = 100
@@ -72,6 +82,7 @@ class Sqlite3Table:
   def _init_db(self) -> None:
     # Implement example
     # self._db.cur.execute('CREATE TABLE IF NOT EXISTS {} (key TEXT, value TEXT)'.format(self._table_name))
+    # self._db.cur.execute('CREATE INDEX IF NOT EXISTS {}_key ON {} (key)'.format(self._table_name, self._table_name))
     raise NotImplementedError
   
   def tuple_to_dict(self, row: Tuple[Any, ...]) -> Dict[str, Any]:
@@ -90,6 +101,11 @@ class Sqlite3Table:
       if key not in table_columns:
         return False
     return True
+  
+  def count(self) -> int:
+    cursor = self._db.conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM {}'.format(self._table_name))
+    return cursor.fetchone()[0]
 
   def safe_insert_many_tuple(self, rows: List[Tuple[Any, ...]]) -> None:
     # New cursor for transaction
@@ -212,4 +228,5 @@ class Sqlite3Utils:
 # TDD
 # Unit test: python -m lyk.utils.sqlite3db
 if __name__ == '__main__':
-  # TODO: Implement unit test
+  pass
+# TODO: Implement unit test
