@@ -35,7 +35,7 @@ import sys
 import utils
 
 # epoch 3 6 10 14 28
-lang = 'cpp_refined_fl/epoch_{}'
+lang = 'cpp_refined_fl2/epoch_{}'
 epochs = [3, 6, 10, 14, 28]
 lr = 5e-5
 # batch_size = 13 # utils.get_epoch(train_steps, train_examples, wanted_epoch)

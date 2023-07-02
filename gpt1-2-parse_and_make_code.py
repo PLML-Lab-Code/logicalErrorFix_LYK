@@ -4,20 +4,25 @@
 import json
 import os
 
-METHOD = 'parse_response2'
+METHOD = 'parse_response1'
 # file names: P[problem_id]_C[Correct_id]_I[Incorrect_id].txt
-INPUT_DIR = 'lyk/output/gpt1-lsh'
+INPUT_DIR = 'lyk/output/gpt1-lcs'
 # file names: [problem_id]C[Correct_id].cpp
 CORRECT_CODE_DIR = 'data/cppfiles_valid'
-OUTPUT_DIR = 'lyk/output/gpt1-lsh-code'
+OUTPUT_DIR = 'lyk/output/gpt1-lcs-code'
 # LINE_NO_DIR = 'lyk/output/gpt1-line-no'
-FAILED_DIR = 'lyk/output/gpt1-lsh-failed'
+FAILED_DIR = 'lyk/output/gpt1-lcs-failed'
 
 def parse_response1(possible_json_str):
   # trim input
   possible_json_str = possible_json_str.strip()
   json_obj = None
   try:
+    # find first '{'
+    possible_json_str = possible_json_str[possible_json_str.index('{'):]
+    # find last '}'
+    possible_json_str = possible_json_str[:possible_json_str.rindex('}')+1]
+
     # { "code": "...", "line_no": "[number]", "stmt": "[string]" }
     json_obj = json.loads(possible_json_str)
   except:
@@ -26,8 +31,19 @@ def parse_response1(possible_json_str):
   if 'line_no' not in json_obj or 'stmt' not in json_obj:
     return None
 
+  line_no = json_obj['line_no']
+  stmt = json_obj['stmt']
+  # try to convert line_no to int or raise
+  try:
+    line_no = int(line_no)
+  except:
+    return None
+  # check stmt is str or raise
+  if not isinstance(stmt, str):
+    return None
+
   # return a tuple
-  return (json_obj['line_no'], json_obj['stmt'])
+  return (line_no, stmt)
 
 def parse_response2(possible_json_str):
   # trim input
@@ -47,8 +63,19 @@ def parse_response2(possible_json_str):
   if 'line_number_with_error' not in json_obj or 'fixed_stmt' not in json_obj:
     return None
 
+  line_no = json_obj['line_number_with_error']
+  stmt = json_obj['fixed_stmt']
+  # try to convert line_no to int or raise
+  try:
+    line_no = int(line_no)
+  except:
+    return None
+  # check stmt is str or raise
+  if not isinstance(stmt, str):
+    return None
+    
   # return a tuple
-  return (json_obj['line_number_with_error'], json_obj['fixed_stmt'])
+  return (line_no, stmt)
 
 def main():
   # ensure output dir exists
