@@ -1,5 +1,17 @@
 # How to use:
-# python lyk/gpt1-2-parse_and_make_code.py
+# python lyk/gpt1_2_parse_and_make_code.py
+'''
+python lyk/gpt1_2_parse_and_make_code.py \
+--input_dir lyk/output/gpt1_lcs \
+--output_db_path lyk/output/gpt1_2_lcs_refined_valid.db \
+--method parse_response1
+'''
+'''
+python lyk/gpt1_2_parse_and_make_code.py \
+--input_dir lyk/output/gpt1_lsh \
+--output_db_path lyk/output/gpt1_2_lsh_refined_valid.db \
+--method parse_response2
+'''
 
 import argparse
 import json
@@ -13,13 +25,13 @@ from utils import Sqlite3Db, Sqlite3TableGpt1_2_stmt, Sqlite3TableGpt1_2_failed
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--db_path', type=str, default='lyk/output/gpt1-2-lsh.db',
-    help='데이터베이스 경로')
-  parser.add_argument('--stmt_table_name', type=str, default='',
+  parser.add_argument('--output_db_path', type=str, default='lyk/output/gpt1-2-NAME.db',
+    help='출력 데이터베이스 경로')
+  parser.add_argument('--output_db_stmt_table_name', type=str, default='',
     help='파싱 데이터베이스 테이블 이름 (비우면 기본값)')
-  parser.add_argument('--failed_table_name', type=str, default='',
+  parser.add_argument('--output_db_failed_table_name', type=str, default='',
     help='실패 데이터베이스 테이블 이름 (비우면 기본값)')
-  parser.add_argument('--input_dir', type=str, default='lyk/output/gpt1-lsh',
+  parser.add_argument('--input_dir', type=str, default='lyk/output/gpt1-NAME',
     help='입력 폴더 경로')
   parser.add_argument('--method', type=str, default='parse_response2',
     help='응답 파싱에 사용할 함수 이름')
@@ -27,14 +39,14 @@ def main():
   args = parser.parse_args()
 
   # db_path parent
-  db_path_parent = os.path.dirname(args.db_path)
+  db_path_parent = os.path.dirname(args.output_db_path)
   # ensure output dir exists
   os.makedirs(db_path_parent, exist_ok=True)
 
   # * 데이터베이스 연결
-  db = Sqlite3Db(args.db_path)
-  table_stmt = Sqlite3TableGpt1_2_stmt(db, args.stmt_table_name)
-  table_failed = Sqlite3TableGpt1_2_failed(db, args.failed_table_name)
+  db = Sqlite3Db(args.output_db_path)
+  table_stmt = Sqlite3TableGpt1_2_stmt(db, args.output_db_stmt_table_name)
+  table_failed = Sqlite3TableGpt1_2_failed(db, args.output_db_failed_table_name)
   try:
     # read dir
     for filename in os.listdir(args.input_dir):

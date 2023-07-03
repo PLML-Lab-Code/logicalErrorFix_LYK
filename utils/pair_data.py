@@ -117,6 +117,20 @@ class PairDataV1:
       if row['PID'] == pid and row['CID'] == cid and row['IID'] == iid:
         return i, (int(row['PID']), int(row['CID']), int(row['IID']), PDCodeV1.from_str(row['Correct_code']), PDCodeV1.from_str(row['Incorrect_code']), str(row['Statement']))
     return -1, None
+  
+  def do_for_each(
+    self,
+    func: Callable[[int, int, int, PDCodeV1, PDCodeV1, str], None]
+  ) -> None:
+    for i, row in self.data.iterrows():
+      func(
+        int(row['PID']),
+        int(row['CID']),
+        int(row['IID']),
+        PDCodeV1.from_str(row['Correct_code']),
+        PDCodeV1.from_str(row['Incorrect_code']),
+        str(row['Statement'])
+  )
 
   def do_map(
     self,

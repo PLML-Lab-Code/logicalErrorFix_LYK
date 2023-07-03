@@ -1,5 +1,5 @@
 # How to Use:
-# OPENAI_API_KEY=<YOUR_KEY> python lyk/gpt1-1-request-openai-gpt3.5.py
+# OPENAI_API_KEY=<YOUR_KEY> python lyk/gpt1_1_request_openai_gpt3.5.py
 
 import os
 
@@ -13,7 +13,7 @@ rate_limiter = RateLimiter(max_calls=3200, period=60)
 
 # [program_id]\t[correct_id]\t[incorrect_id]\t[correct_code]\t[error_code]\t[error_code_stmt]
 DATASET = 'data/edit_distance/refined_pair_code_edit_dist_valid.txt'
-OUTPUT_DIR = 'lyk/output/gpt1-lsh/'
+OUTPUT_DIR = 'lyk/output/gpt1_lsh/'
 MODEL = 'gpt-3.5-turbo'
 #PROMPT_SYSTEM_ZERO_SHOT = "You are a CPP error solver. As a request, you are given a code file delimited by [line number][space][code]. In your response, print the line of code where the error occurred on the first line, and fix that line of code on the second line. If you don't have any code to fix, simply print -1 on the first line and an empty space on the second line. You shouldn't give any response other than the two lines."
 # PROMPT_SYSTEM_ZERO_SHOT = "당신은 cpp 오류 해결사입니다. 요청으로 로지컬 오류가 포함되어 있을 수 있는 코드 파일이 주어집니다. ||| 사이에 있는 코드를 수정시켜주세요. 여러개의 오류가 있는 경우 첫번째 오류 라인과 코드만 출력해야 합니다. 출력은 다음 형식을 따라주세요: \n에러 줄: [에러가_발생한_줄]\t[수정된_코드]\n\n"

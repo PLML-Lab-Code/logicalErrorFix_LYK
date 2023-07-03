@@ -1,5 +1,25 @@
 # How to use:
-# python lyk/gpt1-3-execute_test.py
+# python lyk/gpt1_3_execute_test.py
+'''
+python lyk/gpt1_3_execute_test.py \
+  --dataset valid \
+  --pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+  --workspace lyk/output/tmp/gpt1_3/gpt1_3_lcs_refined_valid \
+  --stmt_db_path lyk/output/gpt1_2_lcs_refined_valid.db \
+  --output_db_path lyk/output/gpt1_3_lcs_refined_valid_gpp17.db \
+  --processes 12 \
+  --timeout 2
+'''
+'''
+python lyk/gpt1_3_execute_test.py \
+  --dataset valid \
+  --pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+  --workspace lyk/output/tmp/gpt1_3/gpt1_3_lsh_refined_valid \
+  --stmt_db_path lyk/output/gpt1_2_lsh_refined_valid.db \
+  --output_db_path lyk/output/gpt1_3_lsh_refined_valid_gpp17.db \
+  --processes 12 \
+  --timeout 2
+'''
 
 import argparse
 import multiprocessing
@@ -7,14 +27,14 @@ import os
 import re
 import time
 import traceback
-from typing import List, Dict, Tuple, Iterable
+from typing import List, Dict, Tuple, Iterable, Any
 import subprocess
 import sys
 
 from tqdm import tqdm
 import pandas as pd
 
-from utils import gpp14_compile_code, Sqlite3Db, Sqlite3TableGpt1_2_stmt, Sqlite3TableGpt1_3, PairDataV1, PDCodeV1
+from utils import gpp14_compile_code, gpp17_compile_code, Sqlite3Db, Sqlite3TableGpt1_2_stmt, Sqlite3TableGpt1_3, PairDataV1, PDCodeV1
 
 
 
@@ -26,13 +46,13 @@ def main():
     help='데이터셋 이름 (train, valid, test)')
   parser.add_argument('--pair_data_path', type=str, default='data/edit_distance/refined_pair_code_edit_dist_valid.txt',
     help='pair data가 있는 파일 경로')
-  parser.add_argument('--workspace', type=str, default='lyk/output/tmp/gpt1_3/gpt1_3_lcs',
+  parser.add_argument('--workspace', type=str, default='lyk/output/tmp/gpt1_3_NAME',
     help='임시 작업 폴더 경로 (컴파일 결과물 등)')
-  parser.add_argument('--stmt_db_path', type=str, default='lyk/output/gpt1_2_lcs.db',
+  parser.add_argument('--stmt_db_path', type=str, default='lyk/output/gpt1_2_NAME.db',
     help='GPT가 생성한 stmt 데이터베이스 파일 경로')
   parser.add_argument('--stmt_db_table_name', type=str, default='',
     help='GPT가 생성한 stmt 데이터베이스 테이블 이름 (비우면 기본값)')
-  parser.add_argument('--output_db_path', type=str, default='lyk/output/gpt1_3_lcs.db',
+  parser.add_argument('--output_db_path', type=str, default='lyk/output/gpt1_3_NAME.db',
     help='출력 데이터베이스 파일 경로')
   parser.add_argument('--output_db_table_name', type=str, default='',
     help='출력 데이터베이스 테이블 이름 (비우면 기본값)')
@@ -48,8 +68,8 @@ def main():
     workspace = args.workspace,
     stmt_db_path = args.stmt_db_path,
     stmt_db_table_name = args.stmt_db_table_name,
-    db_path = args.db_path,
-    db_table_name = args.db_table_name,
+    output_db_path = args.output_db_path,
+    output_db_table_name = args.output_db_table_name,
     processes = args.processes,
     timeout = args.timeout,
   )
@@ -131,8 +151,9 @@ def execute_test(
       return (uid, [code] * len(inputs))
 
     # 컴파일
-    returncode, stdout, stderr = gpp14_compile_code(code, exec_file)
+    returncode, stdout, stderr = gpp17_compile_code(code, exec_file)
     if returncode != 0:
+      # print(f'Compile Error: {uid} {returncode} {stdout} {stderr}')
       return (uid, ['CE'] * len(inputs))
 
     # 테스트
@@ -277,10 +298,17 @@ def gpt1_3_execute_test_stmt_dir(
   # GPT가 생성한 stmt 데이터베이스 연결 (읽기 전용이라 try except db.close 필요 없음)
   stmt_db = Sqlite3Db(stmt_db_path)
   stmt_db_table = Sqlite3TableGpt1_2_stmt(stmt_db, stmt_db_table_name)
+  stmt_db_count = stmt_db_table.count()
+  # !!! 멀티프로세스 제너레이터 안에서 DB 인스턴스 접근 불가로 인해 모든 데이터를 preload 함 (수정 필요할 수 있음)
+  stmt_db_rows = []
+  cursor = stmt_db_table.cursor_reader_dict(batch_size=1000)
+  for rows in cursor:
+    for row in rows:
+      stmt_db_rows.append(row)
 
   # Fail safe required: 멀티프로세싱용 제너레이터
   def generator_read_data(
-    stmt_db_table: Sqlite3TableGpt1_2_stmt,
+    stmt_db_rows: List[Dict[str, Any]],
     pair_data: PairDataV1,
     timeout: int,
   ) -> Iterable[Tuple[str, str, str, List[str], List[str], int]]:
@@ -296,52 +324,49 @@ def gpt1_3_execute_test_stmt_dir(
       incorrect_code = ''
 
       # * GPT가 생성한 stmt 데이터베이스 loop
-      cursor = stmt_db_table.cursor_reader_dict(batch_size=1000)
-      for rows in cursor:
-        for row in rows:
-          pid = row['pid']
-          cid = row['cid']
-          iid = row['iid']
-          line_no = row['line_no']
-          stmt = row['stmt']
+      for row in stmt_db_rows:
+        pid = row['pid']
+        cid = row['cid']
+        iid = row['iid']
+        line_no = row['line_no']
+        stmt = row['stmt']
 
-          # 멀티 프로세싱 추가 디버깅 정보 제공용
-          debug_name = file_name
+        # *** 구분용 인덱스
+        uid = f'P{pid}C{cid}I{iid}'
+        # 멀티 프로세싱 추가 디버깅 정보 제공용
+        debug_name = uid
+        # *** 컴파일 된 실행 파일
+        exec_file = os.path.join(workspace, f'{uid}.exe')
 
-          # *** 구분용 인덱스
-          uid = f'P{pid}C{cid}I{iid}'
-          # *** 컴파일 된 실행 파일
-          exec_file = os.path.join(workspace, f'{uid}.exe')
+        # pair_data에서 pid, cid, iid에 해당하는 incorrect_code를 찾음
+        incorrect_code = ''
+        ret = pair_data.find_by_pid_cid_iid(int(pid), int(cid), int(iid))
+        if ret[0] != -1:
+          incorrect_code = ret[1][4]
 
-          # pair_data에서 pid, cid, iid에 해당하는 incorrect_code를 찾음
-          incorrect_code = ''
-          ret = pair_data.find_by_pid_cid_iid(int(pid), int(cid), int(iid))
-          if ret[0] != -1:
-            incorrect_code = ret[1][4]
-
-          # * incorrect_code가 비어 있으면 테스트 크래시 (stmt 셋을 생성하는데 사용된 pair_data가 아닐 가능성이 높음)
-          if not incorrect_code:
-            print(f'Not exists pair data in pair_data: {uid}')
-            exit(1)
+        # * incorrect_code가 비어 있으면 테스트 크래시 (stmt 셋을 생성하는데 사용된 pair_data가 아닐 가능성이 높음)
+        if not incorrect_code:
+          print(f'Not exists pair data in pair_data: {uid}')
+          exit(1)
+        else:
+          incorrect_pdcode = PDCodeV1.from_str(incorrect_code)
+          # * 변경된 코드가 원본 코드 범위 밖이면 Compile Error처리
+          if len(incorrect_pdcode) < line_no:
+            code = 'CE'
           else:
-            incorrect_pdcode = PDCodeV1.from_str(incorrect_code)
-            # * 변경된 코드가 원본 코드 범위 밖이면 Compile Error처리
-            if len(incorrect_pdcode) < line_no:
-              code = 'CE'
-            else:
-              # * 해당 라인 코드 변경
-              incorrect_pdcode.change_line(line_no, stmt)
-              code = incorrect_pdcode.to_code() # 줄번호 없이 \n로 구분된 코드
-              # ********** code 조립 과정 끝 **********
-          
-          # * 테스트 할 입력과 예상되는 정답 출력을 생성
-          inputs, outputs = read_samples(dataset, pid)
-          if len(inputs) != len(outputs):
-            print(f'Invalid samples in data/samples_{dataset}/{pid}.txt')
-            exit(1)
+            # * 해당 라인 코드 변경
+            incorrect_pdcode.change_line(line_no, stmt)
+            code = incorrect_pdcode.to_code() # 줄번호 없이 \n로 구분된 코드
+            # ********** code 조립 과정 끝 **********
+        
+        # * 테스트 할 입력과 예상되는 정답 출력을 생성
+        inputs, outputs = read_samples(dataset, pid)
+        if len(inputs) != len(outputs):
+          print(f'Invalid samples in data/samples_{dataset}/{pid}.txt')
+          exit(1)
 
-          # * 테스트 generator
-          yield (uid, code, exec_file, inputs, outputs, timeout)
+        # * 테스트 generator
+        yield (uid, code, exec_file, inputs, outputs, timeout)
     # Catch all Exception
     except Exception as e:
       # Print stack trace
@@ -353,19 +378,18 @@ def gpt1_3_execute_test_stmt_dir(
   # generator_read_data를 multi_process_execute_test에 넣어서 실행
   result_iter = multi_process_execute_test(
     processes,
-    len(file_list),
+    stmt_db_count,
     generator_read_data(
-      stmt_db_table,
+      stmt_db_rows,
       pair_data,
       timeout,
     ),
   )
   # # 디버깅용 싱글 스레드 솔루션
   # result_iter = single_process_execute_test(
-  #   len(file_list),
+  #   stmt_db_count,
   #   generator_read_data(
-  #     stmt_db_table,
-  #     file_list,
+  #     stmt_db_rows,
   #     pair_data,
   #     timeout,
   #   ),
