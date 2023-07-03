@@ -50,7 +50,7 @@ MODEL = 'gpt-3.5-turbo'
 #{}'''
 
 PROMPT = '''find the logicial error and fill the json form below.
-o not write any additional information.
+do not write any additional information.
 
 {}
 

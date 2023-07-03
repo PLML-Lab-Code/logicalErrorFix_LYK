@@ -3,6 +3,7 @@
 '''
 python lyk/gpt1_4_make_report.py \
 --pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+--token_data_path lyk/output/gpt1_1_1_lcs_tiktoken_valid.db \
 --stmt_db_path lyk/output/gpt1_2_lcs_refined_valid.db \
 --execute_text_db_path lyk/output/gpt1_3_lcs_refined_valid_gpp17.db \
 --output_dir lyk/output/gpt1_4_lcs_refined_valid_gpp17
@@ -10,6 +11,7 @@ python lyk/gpt1_4_make_report.py \
 '''
 python lyk/gpt1_4_make_report.py \
 --pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+--token_data_path lyk/output/gpt1_1_1_lsh_tiktoken_valid.db \
 --stmt_db_path lyk/output/gpt1_2_lsh_refined_valid.db \
 --execute_text_db_path lyk/output/gpt1_3_lsh_refined_valid_gpp17.db \
 --output_dir lyk/output/gpt1_4_lsh_refined_valid_gpp17
@@ -24,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from utils import Sqlite3Db, Sqlite3TableGpt1_2_stmt, Sqlite3TableGpt1_3, PairDataV1
+from utils import Sqlite3Db, Sqlite3TableGpt1_2_stmt, Sqlite3TableGpt1_3, PairDataV1, Sqlite3TableGpt1_1_1
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -35,6 +37,10 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--pair_data_path', type=str, default='data/edit_distance/refined_pair_code_edit_dist_valid.txt',
     help='원본 데이터 쌍 경로')
+  parser.add_argument('--token_data_path', type=str, default='lyk/output/gpt1_1_1_NAME.db',
+    help='생성된 prompt 의 token 데이터베이스 파일 경로')
+  parser.add_argument('--token_data_table_name', type=str, default='',
+    help='생성된 prompt 의 token 데이터베이스 테이블 이름 (비우면 기본값)')
   parser.add_argument('--stmt_db_path', type=str, default='lyk/output/gpt1-2-NAME.db',
     help='GPT가 생성한 stmt 데이터베이스 파일 경로')
   parser.add_argument('--stmt_db_table_name', type=str, default='',
@@ -52,6 +58,8 @@ def main():
 
   # * 데이터베이스 연결
   pair_data_path = args.pair_data_path
+  token_data_path = args.token_data_path
+  token_data_table_name = args.token_data_table_name
   stmt_db_path = args.stmt_db_path
   stmt_db_table_name = args.stmt_db_table_name
   execute_text_db_path = args.execute_text_db_path
@@ -61,18 +69,31 @@ def main():
   # * 폴더 생성
   os.makedirs(output_dir, exist_ok=True)
 
-  # * 보고서 생성: AC, TLE, WA, RE, CE 비율
-  gpt1_4_make_report_ratio(
-    execute_text_db_path=execute_text_db_path,
-    execute_text_db_table_name=execute_text_db_table_name,
-    output_dir=output_dir
-  )
+  # # * 보고서 생성: AC, TLE, WA, RE, CE 비율
+  # gpt1_4_make_report_ratio(
+  #   execute_text_db_path=execute_text_db_path,
+  #   execute_text_db_table_name=execute_text_db_table_name,
+  #   output_dir=output_dir
+  # )
 
-  # * 보고서 생성: Incorrect_code 의 라인 수 분포 그래프 / line_no 예측 정확도
-  gpt1_4_make_report_line_distribution(
-    pair_data_path=pair_data_path,
-    stmt_db_path=stmt_db_path,
-    stmt_db_table_name=stmt_db_table_name,
+  # # * 보고서 생성: Incorrect_code 의 라인 수 분포 그래프
+  # gpt1_4_make_report_line_distribution(
+  #   pair_data_path=pair_data_path,
+  #   output_dir=output_dir
+  # )
+
+  # # * 보고서 생성: line_no 예측 정확도
+  # gpt1_4_make_report_line_no_accr(
+  #   pair_data_path=pair_data_path,
+  #   stmt_db_path=stmt_db_path,
+  #   stmt_db_table_name=stmt_db_table_name,
+  #   output_dir=output_dir
+  # )
+
+  # * 보고서 생성: 토큰 갯수 분포 그래프
+  gpt1_4_make_report_calc_tiktoken(
+    token_data_path=token_data_path,
+    token_data_table_name=token_data_table_name,
     output_dir=output_dir
   )
 
@@ -210,17 +231,11 @@ def gpt1_4_make_report_ratio(
 
 def gpt1_4_make_report_line_distribution(
   pair_data_path: str,
-  stmt_db_path: str,
-  stmt_db_table_name: str,
   output_dir: str,
 ):
   try:
-    stmt_file_name = os.path.basename(stmt_db_path)
     pair_file_name = os.path.basename(pair_data_path)
     # * 자료 읽기
-    stmt_db = Sqlite3Db(stmt_db_path)
-    stmt_db_table = Sqlite3TableGpt1_2_stmt(stmt_db, stmt_db_table_name)
-
     pair_data = PairDataV1.from_csv(pair_data_path)
 
 
@@ -276,7 +291,7 @@ def gpt1_4_make_report_line_distribution(
 
     # * Matplotlib bar chart with percentage
     plt.clf() # clear
-    img_path = os.path.join(output_dir, 'gpt1-4-line_distribution.png')
+    img_path = os.path.join(output_dir, 'gpt1-4-line_distribution_{}.png'.format(pair_file_name))
     data = [
       line_lt_10,
       line_lt_20,
@@ -310,8 +325,27 @@ def gpt1_4_make_report_line_distribution(
     plt.tight_layout()
     plt.draw()
     plt.savefig(img_path, dpi=200)
+  
+  except Exception as e:
+    logger.error(f'Failed to make report: {pair_data_path}')
+    logger.error(traceback.format_exc())
 
+  
 
+def gpt1_4_make_report_line_no_accr(
+  pair_data_path: str,
+  stmt_db_path: str,
+  stmt_db_table_name: str,
+  output_dir: str,
+):
+  try:
+    stmt_file_name = os.path.basename(stmt_db_path)
+    pair_file_name = os.path.basename(pair_data_path)
+    # * 자료 읽기
+    stmt_db = Sqlite3Db(stmt_db_path)
+    stmt_db_table = Sqlite3TableGpt1_2_stmt(stmt_db, stmt_db_table_name)
+
+    pair_data = PairDataV1.from_csv(pair_data_path)
 
     # * line_no 예측 정확도
     line_no_correct = 0
@@ -331,6 +365,7 @@ def gpt1_4_make_report_line_distribution(
         try:
           if predict_line_no == int(line_no_str):
             line_no_correct += 1
+            # print(f'---debug\ncorrect: P{pid}C{cid}I{iid}\nline_no: {line_no_str}\n')
           else:
             line_no_incorrect += 1
         except Exception as e:
@@ -343,15 +378,93 @@ def gpt1_4_make_report_line_distribution(
 
     txt_path = os.path.join(output_dir, 'gpt1-4-line_no_accuracy.txt')
     with open(txt_path, 'w') as f:
-      f.write(f'line_no_correct: {line_no_correct}\n')
-      f.write(f'line_no_incorrect: {line_no_incorrect}\n')
-      f.write(f'line_no_failed: {line_no_failed}\n')
-      f.write(f'line_no_total: {line_no_total}\n')
-      f.write(f'line_no_accuracy: {line_no_correct / line_no_total * 100:.2f}%\n')
-  
+      f.write(f'total: {line_no_total}\n')
+      f.write(f'correct: {line_no_correct}\n')
+      f.write(f'incorrect: {line_no_incorrect}\n')
+      f.write(f'failed: {line_no_failed}\n')
+      f.write(f'accuracy: {line_no_correct / line_no_total * 100:.2f}%\n')
+
   except Exception as e:
     logger.error(f'Failed to make report: {pair_data_path}')
     logger.error(traceback.format_exc())
+
+
+
+# 토큰 갯수 분포 그래프
+def gpt1_4_make_report_calc_tiktoken(
+  token_data_path: str,
+  token_data_table_name: str,
+  output_dir: str,
+):
+
+  # * 데이터베이스 연결
+  db = Sqlite3Db(token_data_path)
+  table = Sqlite3TableGpt1_1_1(db, token_data_table_name)
+
+  # * 데이터베이스 읽기
+  token_lt_400 = 0
+  token_lt_800 = 0
+  token_lt_1200 = 0
+  token_lt_1600 = 0
+  token_lt_2000 = 0
+  token_ge_2000 = 0
+  token_total = 0
+  token_n = 0
+
+  count = table.count()
+  cursor = table.cursor_reader_dict()
+
+  with tqdm(total=count, desc='📖 token distribution') as pbar:
+    for rows in cursor:
+      for row in rows:
+        token_count = row["token_count"]
+        token_total += token_count
+        if token_count < 400:
+          token_lt_400 += 1
+        elif token_count < 800:
+          token_lt_800 += 1
+        elif token_count < 1200:
+          token_lt_1200 += 1
+        elif token_count < 1600:
+          token_lt_1600 += 1
+        elif token_count < 2000:
+          token_lt_2000 += 1
+        else:
+          token_ge_2000 += 1
+        pbar.update(1)
+        token_n += 1
+
+  # * Matplotlib bar chart with percentage
+  plt.clf() # clear
+  img_path = os.path.join(output_dir, 'gpt1-4-token_distribution.png')
+  data = [
+    token_lt_400,
+    token_lt_800,
+    token_lt_1200,
+    token_lt_1600,
+    token_lt_2000,
+    token_ge_2000,
+  ]
+  x = np.arange(len(data))
+  plt.bar(x, data)
+  plt.xticks(x, ('<400', '<800', '<1200', '<1600', '<2000', '>=2000'))
+  plt.ylabel('Count')
+  plt.title('Script: GPT-1-4\nincorrect_code token distribution (count: {} / avg_token: {:.2f})\n'.format(token_n, token_total / token_n))
+  plt.text(0, token_lt_400, '{:.2f}%\n({})'.format(token_lt_400 / token_n * 100, token_lt_400), ha='center', va='bottom')
+  plt.text(1, token_lt_800, '{:.2f}%\n({})'.format(token_lt_800 / token_n * 100, token_lt_800), ha='center', va='bottom')
+  plt.text(2, token_lt_1200, '{:.2f}%\n({})'.format(token_lt_1200 / token_n * 100, token_lt_1200), ha='center', va='bottom')
+  plt.text(3, token_lt_1600, '{:.2f}%\n({})'.format(token_lt_1600 / token_n * 100, token_lt_1600), ha='center', va='bottom')
+  plt.text(4, token_lt_2000, '{:.2f}%\n({})'.format(token_lt_2000 / token_n * 100, token_lt_2000), ha='center', va='bottom')
+  plt.text(5, token_ge_2000, '{:.2f}%\n({})'.format(token_ge_2000 / token_n * 100, token_ge_2000), ha='center', va='bottom')
+
+  plt.tight_layout()
+  plt.draw()
+  plt.savefig(img_path, dpi=200)
+
+  # * 데이터베이스 닫기
+  db.close(commit=False)
+  db = None
+  table = None
 
 
 

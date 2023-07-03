@@ -55,16 +55,20 @@ mv logicalErrorFix_LYK lyk
   - GPT 3.5 inference를 통해 코드 생성
   - Input `data/edit_distance/refined_pair_code_edit_dist_[test,train,valid].txt`
   - Output: `lyk/output/gpt1-[NAME]`
-2. `gpt_1-2_parse_and_make_code.py`
+2. `gpt1_1_1_calc_tiktoken.py`
+  - OpenAI의 tiktoken 라이브러리를 사용해 요청에 사용될 토큰 양 계산
+  - Input: `data/edit_distance/refined_pair_code_edit_dist_[test,train,valid].txt`
+  - Output: `lyk/output/gpt1_1_1_[NAME].db`
+3. `gpt1_2_parse_and_make_code.py`
   - GPT 응답을 분석해서 구조화된 코드로 변환해 데이터베이스 저장
   - Input: `lyk/output/gpt1_[NAME]/*`
   - Output: `lyk/output/gpt1_2_[NAME].db`
-3. `gpt_1_3_execute_test.py`
+4. `gpt1_3_execute_test.py`
   - GPT 라인 수정 제안 코드를 기존 Incorrect_code 와 합쳐 수정 후 컴파일, AC, TLE, WA, RE, CE 여부 데이터베이스 저장
   - Input `data/edit_distance/refined_pair_code_edit_dist_[test,train,valid].txt`
   - Input: `lyk/output/gpt1_2_[NAME].db`
   - Output: `lyk/output/gpt1_3_[NAME].db`
-4. `gpt_1_4_make_report.py`
+5. `gpt1_4_make_report.py`
   - 데이터베이스에 저장된 각종 정보를 기반으로 정확도와 보고서 출력
   - Input: `lyk/output/gpt1_3_[NAME].db`
   - Output: `lyk/output/gpt1_4_[NAME]/*.{png,txt}`

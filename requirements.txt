@@ -2,3 +2,4 @@ openai
 backoff
 ratelimiter
 sqlite3
+tiktoken
