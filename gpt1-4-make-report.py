@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from utils import Sqlite3Db, Sqlite3TableExecute
+from utils import Sqlite3Db, Sqlite3TableGpt1_3
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -20,6 +20,9 @@ def main():
     help='데이터베이스 경로')
   parser.add_argument('--table_name', type=str, default='',
     help='데이터베이스 테이블 이름 (비우면 기본값)')
+  parser.add_argument('--pair_data_path', type=str, default='data/edit_distance/refined_pair_code_edit_dist_valid.txt',
+    help='원본 데이터 쌍 경로')
+  parser.add_argument('')
   parser.add_argument('--output_dir', type=str, default='lyk/output/gpt1-4-lcs',
     help='출력 폴더 경로')
 
@@ -32,8 +35,8 @@ def main():
   # * 폴더 생성
   os.makedirs(output_dir, exist_ok=True)
 
-  # * 보고서 생성
-  gpt1_4_make_report(
+  # * 보고서 생성: AC, TLE, WA, RE, CE 비율
+  gpt1_4_make_report_ratio(
     db_path=db_path,
     table_name=table_name,
     output_dir=output_dir
@@ -41,7 +44,7 @@ def main():
 
 
 
-def gpt1_4_make_report(
+def gpt1_4_make_report_ratio(
   db_path: str,
   table_name: str,
   output_dir: str
@@ -49,7 +52,7 @@ def gpt1_4_make_report(
   file_name = os.path.basename(db_path)
   # * 데이터베이스 연결
   db = Sqlite3Db(db_path)
-  table = Sqlite3TableExecute(db, table_name)
+  table = Sqlite3TableGpt1_3(db, table_name)
 
   # * 데이터베이스 읽기
 

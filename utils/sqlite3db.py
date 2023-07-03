@@ -95,8 +95,9 @@ class Sqlite3Table:
   
   def ensure_keys(self, keys: List[str]) -> bool:
     # Ensure all keys are in the table
-    self._db.cur.execute('SELECT * FROM {} LIMIT 0'.format(self._table_name))
-    table_columns = [description[0] for description in self._db.cur.description]
+    cursor = self._db.conn.cursor()
+    cursor.execute('SELECT * FROM {} LIMIT 0'.format(self._table_name))
+    table_columns = [description[0] for description in cursor.description]
     for key in keys:
       if key not in table_columns:
         return False

@@ -1,11 +1,14 @@
+# Db for gpt1_3 - ChatGPT Code Fix inference test result
 from typing import List, Dict, Any, Generator, Tuple
 
-from .sqlite3db import Sqlite3Db Sqlite3Table
+from . import Sqlite3Db, Sqlite3Table
 
 # Extend Sqlite3Table
-class Sqlite3TableExecute(Sqlite3Table):
+class Sqlite3TableGpt1_3(Sqlite3Table):
 
-  def __init__(self, sqlite3db: Sqlite3Db, table_name: str = 'execute'):
+  def __init__(self, sqlite3db: Sqlite3Db, table_name: str = 'gpt1_3'):
+    if not table_name:
+      table_name = 'gpt1_3'
     super().__init__(sqlite3db, table_name)
 
   # pid: int - program id

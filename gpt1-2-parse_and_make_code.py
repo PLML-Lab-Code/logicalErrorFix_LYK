@@ -1,17 +1,79 @@
 # How to use:
 # python lyk/gpt1-2-parse_and_make_code.py
 
+import argparse
 import json
 import os
+import re
+from typing import Any, Dict, Generator, List, Tuple
 
-METHOD = 'parse_response1'
-# file names: P[problem_id]_C[Correct_id]_I[Incorrect_id].txt
-INPUT_DIR = 'lyk/output/gpt1-lcs'
-# file names: [problem_id]C[Correct_id].cpp
-CORRECT_CODE_DIR = 'data/cppfiles_valid'
-OUTPUT_DIR = 'lyk/output/gpt1-lcs-code'
-# LINE_NO_DIR = 'lyk/output/gpt1-line-no'
-FAILED_DIR = 'lyk/output/gpt1-lcs-failed'
+from utils import Sqlite3Db, Sqlite3TableGpt1_2_stmt, Sqlite3TableGpt1_2_failed
+
+
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--db_path', type=str, default='lyk/output/gpt1-2-lsh.db',
+    help='데이터베이스 경로')
+  parser.add_argument('--stmt_table_name', type=str, default='',
+    help='파싱 데이터베이스 테이블 이름 (비우면 기본값)')
+  parser.add_argument('--failed_table_name', type=str, default='',
+    help='실패 데이터베이스 테이블 이름 (비우면 기본값)')
+  parser.add_argument('--input_dir', type=str, default='lyk/output/gpt1-lsh',
+    help='입력 폴더 경로')
+  parser.add_argument('--method', type=str, default='parse_response2',
+    help='응답 파싱에 사용할 함수 이름')
+
+  args = parser.parse_args()
+
+  # db_path parent
+  db_path_parent = os.path.dirname(args.db_path)
+  # ensure output dir exists
+  os.makedirs(db_path_parent, exist_ok=True)
+
+  # * 데이터베이스 연결
+  db = Sqlite3Db(args.db_path)
+  table_stmt = Sqlite3TableGpt1_2_stmt(db, args.stmt_table_name)
+  table_failed = Sqlite3TableGpt1_2_failed(db, args.failed_table_name)
+  try:
+    # read dir
+    for filename in os.listdir(args.input_dir):
+      # Parse filename as P[problem_id]C[Correct_id]I[Incorrect_id].txt
+      matched = re.match(r'P(\d+)C(\d+)I(\d+).txt', filename)
+      if matched is None:
+        print('Critical failed to parse: {}'.format(filename))
+        exit(1)
+      pid, cid, iid = matched.groups()
+
+      # read file
+      with open(os.path.join(args.input_dir, filename), 'r') as f:
+        # read file content
+        content = f.read()
+        # parse
+        json_obj = globals()[args.method](content)
+        if json_obj is None:
+          print('Failed to parse: {}'.format(filename))
+          table_failed.safe_insert_many_dict([{
+            'pid': pid,
+            'cid': cid,
+            'iid': iid,
+            'response': content
+          }])
+          continue
+      
+        # insert to db
+        table_stmt.safe_insert_many_dict([{
+          'pid': pid,
+          'cid': cid,
+          'iid': iid,
+          'line_no': int(json_obj[0]),
+          'stmt': str(json_obj[1])
+        }])
+
+  except Exception as e:
+    db.conn.rollback()
+    db.close()
+    raise e
 
 def parse_response1(possible_json_str):
   # trim input
@@ -76,36 +138,6 @@ def parse_response2(possible_json_str):
     
   # return a tuple
   return (line_no, stmt)
-
-def main():
-  # ensure output dir exists
-  if not os.path.exists(OUTPUT_DIR):
-    os.makedirs(OUTPUT_DIR)
-  # if not os.path.exists(LINE_NO_DIR):
-  #   os.makedirs(LINE_NO_DIR)
-  if not os.path.exists(FAILED_DIR):
-    os.makedirs(FAILED_DIR)
-
-  # read dir
-  for filename in os.listdir(INPUT_DIR):
-    # read file
-    with open(os.path.join(INPUT_DIR, filename), 'r') as f:
-      # read file content
-      content = f.read()
-      # parse
-      json_obj = globals()[METHOD](content)
-      if json_obj is None:
-        print('Failed to parse: {}'.format(filename))
-        # cp to failed dir
-        with open(os.path.join(FAILED_DIR, filename), 'w') as f:
-          f.write(str(content))
-        continue
-      # write to file
-      # with open(os.path.join(LINE_NO_DIR, filename), 'w') as f:
-      #   f.write(str(json_obj[0]) + '\n')
-      
-      with open(os.path.join(OUTPUT_DIR, filename), 'w') as f:
-        f.write(f'{str(json_obj[0])} {str(json_obj[1])}\n')
 
 if __name__ == '__main__':
   main()
