@@ -12,6 +12,18 @@ python lyk/gpt1_2_parse_and_make_code.py \
 --output_db_path lyk/output/gpt1_2_lsh_refined_valid.db \
 --method parse_response2
 '''
+'''
+python lyk/gpt1_2_parse_and_make_code.py \
+--input_dir lyk/output/gpt1_lshv2 \
+--output_db_path lyk/output/gpt1_2_lshv2_refined_valid.db \
+--method parse_response2
+'''
+'''
+python lyk/gpt1_2_parse_and_make_code.py \
+--input_dir lyk/output/gpt1_lshv2fs \
+--output_db_path lyk/output/gpt1_2_lshv2fs_refined_valid.db \
+--method parse_response2
+'''
 
 import argparse
 import json

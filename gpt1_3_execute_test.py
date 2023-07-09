@@ -20,6 +20,26 @@ python lyk/gpt1_3_execute_test.py \
   --processes 12 \
   --timeout 2
 '''
+'''
+python lyk/gpt1_3_execute_test.py \
+  --dataset valid \
+  --pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+  --workspace lyk/output/tmp/gpt1_3/gpt1_3_lshv3_refined_valid \
+  --stmt_db_path lyk/output/gpt1_2_lshv3_refined_valid.db \
+  --output_db_path lyk/output/gpt1_3_lshv3_refined_valid_gpp17.db \
+  --processes 12 \
+  --timeout 2
+'''
+'''
+python lyk/gpt1_3_execute_test.py \
+  --dataset valid \
+  --pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+  --workspace lyk/output/tmp/gpt1_3/gpt1_3_lshv2fs_refined_valid \
+  --stmt_db_path lyk/output/gpt1_2_lshv2fs_refined_valid.db \
+  --output_db_path lyk/output/gpt1_3_lshv2fs_refined_valid_gpp17.db \
+  --processes 12 \
+  --timeout 2
+'''
 
 import argparse
 import multiprocessing

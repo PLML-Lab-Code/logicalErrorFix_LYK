@@ -8,12 +8,14 @@ import openai
 from ratelimiter import RateLimiter
 from tqdm import tqdm, trange
 
+from utils import gpt1_json_prompt_reader
+
 # 분당 최대 3500번의 호출을 수행할 수 있는 rate_limiter를 생성 (gpt-3.5-turbo 제한 분당 3,500요청 /90,000 토큰)
 rate_limiter = RateLimiter(max_calls=3200, period=60)
 
 # [program_id]\t[correct_id]\t[incorrect_id]\t[correct_code]\t[error_code]\t[error_code_stmt]
 DATASET = 'data/edit_distance/refined_pair_code_edit_dist_valid.txt'
-OUTPUT_DIR = 'lyk/output/gpt1_lsh/'
+OUTPUT_DIR = 'lyk/output/gpt1_lshv2fs/'
 MODEL = 'gpt-3.5-turbo'
 #PROMPT_SYSTEM_ZERO_SHOT = "You are a CPP error solver. As a request, you are given a code file delimited by [line number][space][code]. In your response, print the line of code where the error occurred on the first line, and fix that line of code on the second line. If you don't have any code to fix, simply print -1 on the first line and an empty space on the second line. You shouldn't give any response other than the two lines."
 # PROMPT_SYSTEM_ZERO_SHOT = "당신은 cpp 오류 해결사입니다. 요청으로 로지컬 오류가 포함되어 있을 수 있는 코드 파일이 주어집니다. ||| 사이에 있는 코드를 수정시켜주세요. 여러개의 오류가 있는 경우 첫번째 오류 라인과 코드만 출력해야 합니다. 출력은 다음 형식을 따라주세요: \n에러 줄: [에러가_발생한_줄]\t[수정된_코드]\n\n"
@@ -49,6 +51,24 @@ MODEL = 'gpt-3.5-turbo'
 
 #{}'''
 
+# PROMPT = '''find the logicial error and fill the json form below.
+# do not write any additional information.
+
+# {}
+
+# {{"line_number_with_error": "", "original_stmt": "", "fixed_stmt": ""}}'''
+
+#13	388	212	"1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 signed main() {||| 4 int t;||| 5 cin >> t;||| 6 while (t--) {||| 7 string s;||| 8 cin >> s;||| 9 int n = s.size();||| 10 int cnt = 0;||| 11 for (int i = 0; i < n; i++) {||| 12 cnt += s[i] == 'B';||| 13 }||| 14 if (cnt + cnt == n)||| 15 cout << "YES\n";||| 16 else||| 17 cout << "NO\n";||| 18 }||| 19 }||| "	"1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 signed main() {||| 4 int t;||| 5 cin >> t;||| 6 while (t--) {||| 7 string s;||| 8 cin >> s;||| 9 int n = s.size();||| 10 int cnt = 0;||| 11 for (int i = 0; i < n; i++) {||| 12 cnt += s[i] == 'B';||| 13 }||| 14 if (cnt + cnt >= n)||| 15 cout << "YES\n";||| 16 else||| 17 cout << "NO\n";||| 18 }||| 19 }||| "	14 if (cnt + cnt == n)
+# 1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 signed main() {||| 4 int t;||| 5 cin >> t;||| 6 while (t--) {||| 7 string s;||| 8 cin >> s;||| 9 int n = s.size();||| 10 int cnt = 0;||| 11 for (int i = 0; i < n; i++) {||| 12 cnt += s[i] == 'B';||| 13 }||| 14 if (cnt + cnt >= n)||| 15 cout << "YES\n";||| 16 else||| 17 cout << "NO\n";||| 18 }||| 19 }||| 
+# 14
+# if (cnt + cnt >= n)
+# if (cnt + cnt == n)
+# 28	42	288	"1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 void solve() {||| 4 int m, n, o, x, y, z, p, q, c = 0, l;||| 5 scanf("%d %d %d", &m, &n, &o);||| 6 if ((m + o) % 2 == 0) {||| 7 printf("0\n");||| 8 } else {||| 9 printf("1\n");||| 10 }||| 11 }||| 12 int main() {||| 13 int t;||| 14 scanf("%d", &t);||| 15 for (int i = 1; i <= t; i++) {||| 16 solve();||| 17 }||| 18 return 0;||| 19 }||| "	"1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 void solve() {||| 4 int m, n, o, x, y, z, p, q, c = 0, l;||| 5 scanf("%d %d %d", &m, &n, &o);||| 6 if ((m + o) % 2 == 0) {||| 7 printf("1\n");||| 8 } else {||| 9 printf("0\n");||| 10 }||| 11 }||| 12 int main() {||| 13 int t;||| 14 scanf("%d", &t);||| 15 for (int i = 1; i <= t; i++) {||| 16 solve();||| 17 }||| 18 return 0;||| 19 }||| "	"7 printf("0\n");"
+# 1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 void solve() {||| 4 int m, n, o, x, y, z, p, q, c = 0, l;||| 5 scanf("%d %d %d", &m, &n, &o);||| 6 if ((m + o) % 2 == 0) {||| 7 printf("1\n");||| 8 } else {||| 9 printf("0\n");||| 10 }||| 11 }||| 12 int main() {||| 13 int t;||| 14 scanf("%d", &t);||| 15 for (int i = 1; i <= t; i++) {||| 16 solve();||| 17 }||| 18 return 0;||| 19 }||| 
+# 7
+# 틀: printf("1\n");
+# 맞: printf("0\n");
+
 PROMPT = '''find the logicial error and fill the json form below.
 do not write any additional information.
 
@@ -65,19 +85,23 @@ def create_prompt(code):
     code = code[1:-1]
   # Replace " with \"
   code = code.replace('"', '\\"')
-  return PROMPT.format(code)
+  # return PROMPT.format(code)
+  return code
 
 @backoff.on_exception(backoff.expo, Exception, max_tries=16) # openai.error.RateLimitError
 def openai_chat_cpp_error_solver(prompt):
+  # print("debug: prompt: ", prompt)
+  # print("debug: reader: ", gpt1_json_prompt_reader('lyk/gpt1/prompt/lshv2.json', prompt))
   # openai.Completion.create
   response = openai.ChatCompletion.create(
     model=MODEL,
-    messages=[
-      # {"role": "system", "content": PROMPT_SYSTEM_ZERO_SHOT},
-      # {"role": "user", "content":  '1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 int main() {||| 4 int t;||| 5 cin >> t;||| 6 while (t--) {||| 7 int c = 0;||| 8 string s;||| 9 cin >> s;||| 10 for (int i = 0; i < s.length(); i++) {||| 11 if (s[i] == \'N\') c++;||| 12 }||| 13 if (c > 1)||| 14 cout << ""YES"" << endl;||| 15 else||| 16 cout << ""NO"" << endl;||| 17 }||| 18 return 0;||| 19 }||| '},
-      # {"role": "assistant", "content": '13\nif (c != 1)'},
-      {"role": "user", "content": prompt},
-    ],
+    messages=gpt1_json_prompt_reader('lyk/gpt1/prompt/lshv2fs.json', prompt),
+    # [
+    #   # {"role": "system", "content": PROMPT_SYSTEM_ZERO_SHOT},
+    #   # {"role": "user", "content":  '1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 int main() {||| 4 int t;||| 5 cin >> t;||| 6 while (t--) {||| 7 int c = 0;||| 8 string s;||| 9 cin >> s;||| 10 for (int i = 0; i < s.length(); i++) {||| 11 if (s[i] == \'N\') c++;||| 12 }||| 13 if (c > 1)||| 14 cout << ""YES"" << endl;||| 15 else||| 16 cout << ""NO"" << endl;||| 17 }||| 18 return 0;||| 19 }||| '},
+    #   # {"role": "assistant", "content": '13\nif (c != 1)'},
+    #   {"role": "user", "content": prompt},
+    # ],
     temperature=0,
   )
 # <OpenAIObject chat.completion id=chatcmpl-6xpmlDodtW6RwiaMaC1zhLsR8Y1D3 at 0x10dccc900> JSON: {

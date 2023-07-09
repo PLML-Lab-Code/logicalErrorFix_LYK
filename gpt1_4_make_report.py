@@ -16,6 +16,22 @@ python lyk/gpt1_4_make_report.py \
 --execute_text_db_path lyk/output/gpt1_3_lsh_refined_valid_gpp17.db \
 --output_dir lyk/output/gpt1_4_lsh_refined_valid_gpp17
 '''
+'''
+python lyk/gpt1_4_make_report.py \
+--pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+--token_data_path lyk/output/gpt1_1_1_lshv3_tiktoken_valid.db \
+--stmt_db_path lyk/output/gpt1_2_lshv3_refined_valid.db \
+--execute_text_db_path lyk/output/gpt1_3_lshv3_refined_valid_gpp17.db \
+--output_dir lyk/output/gpt1_4_lshv3_refined_valid_gpp17
+'''
+'''
+python lyk/gpt1_4_make_report.py \
+--pair_data_path data/edit_distance/refined_pair_code_edit_dist_valid.txt \
+--token_data_path lyk/output/gpt1_1_1_lshv2fs_tiktoken_valid.db \
+--stmt_db_path lyk/output/gpt1_2_lshv2fs_refined_valid.db \
+--execute_text_db_path lyk/output/gpt1_3_lshv2fs_refined_valid_gpp17.db \
+--output_dir lyk/output/gpt1_4_lshv2fs_refined_valid_gpp17
+'''
 
 import argparse
 import logging
@@ -69,26 +85,26 @@ def main():
   # * 폴더 생성
   os.makedirs(output_dir, exist_ok=True)
 
-  # # * 보고서 생성: AC, TLE, WA, RE, CE 비율
-  # gpt1_4_make_report_ratio(
-  #   execute_text_db_path=execute_text_db_path,
-  #   execute_text_db_table_name=execute_text_db_table_name,
-  #   output_dir=output_dir
-  # )
+  # * 보고서 생성: AC, TLE, WA, RE, CE 비율
+  gpt1_4_make_report_ratio(
+    execute_text_db_path=execute_text_db_path,
+    execute_text_db_table_name=execute_text_db_table_name,
+    output_dir=output_dir
+  )
 
-  # # * 보고서 생성: Incorrect_code 의 라인 수 분포 그래프
-  # gpt1_4_make_report_line_distribution(
-  #   pair_data_path=pair_data_path,
-  #   output_dir=output_dir
-  # )
+  # * 보고서 생성: Incorrect_code 의 라인 수 분포 그래프
+  gpt1_4_make_report_line_distribution(
+    pair_data_path=pair_data_path,
+    output_dir=output_dir
+  )
 
-  # # * 보고서 생성: line_no 예측 정확도
-  # gpt1_4_make_report_line_no_accr(
-  #   pair_data_path=pair_data_path,
-  #   stmt_db_path=stmt_db_path,
-  #   stmt_db_table_name=stmt_db_table_name,
-  #   output_dir=output_dir
-  # )
+  # * 보고서 생성: line_no 예측 정확도
+  gpt1_4_make_report_line_no_accr(
+    pair_data_path=pair_data_path,
+    stmt_db_path=stmt_db_path,
+    stmt_db_table_name=stmt_db_table_name,
+    output_dir=output_dir
+  )
 
   # * 보고서 생성: 토큰 갯수 분포 그래프
   gpt1_4_make_report_calc_tiktoken(
@@ -449,13 +465,13 @@ def gpt1_4_make_report_calc_tiktoken(
   plt.bar(x, data)
   plt.xticks(x, ('<400', '<800', '<1200', '<1600', '<2000', '>=2000'))
   plt.ylabel('Count')
-  plt.title('Script: GPT-1-4\nincorrect_code token distribution (count: {} / avg_token: {:.2f})\n'.format(token_n, token_total / token_n))
-  plt.text(0, token_lt_400, '{:.2f}%\n({})'.format(token_lt_400 / token_n * 100, token_lt_400), ha='center', va='bottom')
-  plt.text(1, token_lt_800, '{:.2f}%\n({})'.format(token_lt_800 / token_n * 100, token_lt_800), ha='center', va='bottom')
-  plt.text(2, token_lt_1200, '{:.2f}%\n({})'.format(token_lt_1200 / token_n * 100, token_lt_1200), ha='center', va='bottom')
-  plt.text(3, token_lt_1600, '{:.2f}%\n({})'.format(token_lt_1600 / token_n * 100, token_lt_1600), ha='center', va='bottom')
-  plt.text(4, token_lt_2000, '{:.2f}%\n({})'.format(token_lt_2000 / token_n * 100, token_lt_2000), ha='center', va='bottom')
-  plt.text(5, token_ge_2000, '{:.2f}%\n({})'.format(token_ge_2000 / token_n * 100, token_ge_2000), ha='center', va='bottom')
+  plt.title('Script: GPT-1-4\nincorrect_code token distribution (count: {} / avg_token: {:.2f})\n'.format(token_n, token_total / (token_n or 1)))
+  plt.text(0, token_lt_400, '{:.2f}%\n({})'.format(token_lt_400 / (token_n or 1) * 100, token_lt_400), ha='center', va='bottom')
+  plt.text(1, token_lt_800, '{:.2f}%\n({})'.format(token_lt_800 / (token_n or 1) * 100, token_lt_800), ha='center', va='bottom')
+  plt.text(2, token_lt_1200, '{:.2f}%\n({})'.format(token_lt_1200 / (token_n or 1) * 100, token_lt_1200), ha='center', va='bottom')
+  plt.text(3, token_lt_1600, '{:.2f}%\n({})'.format(token_lt_1600 / (token_n or 1) * 100, token_lt_1600), ha='center', va='bottom')
+  plt.text(4, token_lt_2000, '{:.2f}%\n({})'.format(token_lt_2000 / (token_n or 1) * 100, token_lt_2000), ha='center', va='bottom')
+  plt.text(5, token_ge_2000, '{:.2f}%\n({})'.format(token_ge_2000 / (token_n or 1) * 100, token_ge_2000), ha='center', va='bottom')
 
   plt.tight_layout()
   plt.draw()

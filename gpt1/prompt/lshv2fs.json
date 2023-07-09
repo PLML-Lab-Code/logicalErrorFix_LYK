@@ -1,0 +1,23 @@
+[
+  {
+    "role": "user",
+    "content": "find the logicial error and fill the json form below.\ndo not write any additional information.\n---\n1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 signed main() {||| 4 int t;||| 5 cin >> t;||| 6 while (t--) {||| 7 string s;||| 8 cin >> s;||| 9 int n = s.size();||| 10 int cnt = 0;||| 11 for (int i = 0; i < n; i++) {||| 12 cnt += s[i] == 'B';||| 13 }||| 14 if (cnt + cnt >= n)||| 15 cout << \"YES\\n\";||| 16 else||| 17 cout << \"NO\\n\";||| 18 }||| 19 }||| \n---\n{\"line_number_with_error\": \"\", \"original_stmt\": \"\", \"fixed_stmt\": \"\"}"
+  },
+  {
+    "role": "assistant",
+    "content": "{\"line_number_with_error\": \"14\", \"original_stmt\": \"if (cnt + cnt >= n)\", \"fixed_stmt\": \"(cnt + cnt == n)\"}"
+  },
+  {
+    "role": "user",
+    "content": "find the logicial error and fill the json form below.\ndo not write any additional information.\n---\n1 #include <bits/stdc++.h>||| 2 using namespace std;||| 3 void solve() {||| 4 int m, n, o, x, y, z, p, q, c = 0, l;||| 5 scanf(\"%d %d %d\", &m, &n, &o);||| 6 if ((m + o) % 2 == 0) {||| 7 printf(\"1\\n\");||| 8 } else {||| 9 printf(\"0\\n\");||| 10 }||| 11 }||| 12 int main() {||| 13 int t;||| 14 scanf(\"%d\", &t);||| 15 for (int i = 1; i <= t; i++) {||| 16 solve();||| 17 }||| 18 return 0;||| 19 }||| \n---\n{\"line_number_with_error\": \"\", \"original_stmt\": \"\", \"fixed_stmt\": \"\"}"
+  },
+  {
+    "role": "assistant",
+    "content": "{\"line_number_with_error\": \"7\", \"original_stmt\": \"printf(\"1\\n\");\", \"fixed_stmt\": \"printf(\"1\\n\");\"}"
+  },
+  {
+    "role": "user",
+    "format": true,
+    "content": "find the logicial error and fill the json form below.\ndo not write any additional information.\n---\n{code}\n---\n{{\"line_number_with_error\": \"\", \"original_stmt\": \"\", \"fixed_stmt\": \"\"}}"
+  }
+]
