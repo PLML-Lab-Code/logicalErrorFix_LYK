@@ -72,3 +72,24 @@ mv logicalErrorFix_LYK lyk
   - 데이터베이스에 저장된 각종 정보를 기반으로 정확도와 보고서 출력
   - Input: `lyk/output/gpt1_3_[NAME].db`
   - Output: `lyk/output/gpt1_4_[NAME]/*.{png,txt}`
+
+
+### 6. `ccpy1` (Make CodeContest python dataset)
+1. 🏗️ `ccpy1_1_convert_riegeli2py.py` - Riegeli 를 이용해 대회파일에서 python 파일과 데이터만 출력하기
+  - Input File: `/tmp/dm-code_contests/*` (대회 파일, 93suhwan/logicalErrorFix 확인 할 것)
+  - Output File: `lyk/archive/data/ccpy1_raw.db`
+    - table: `problem`
+      - primary key: `problem_id`
+      - colums: `[INT]problem_id`, `[TEXT]description`
+    - table: `problem_correct`, `problem_incorrect`
+      - primary key: `problem_id`, `correct_id` (처리 용이성을 위해 `incorrect_id`인 경우도 `correct_id` 로 표기)
+      - columns: `[INT]problem_id`, `[INT]correct_id`, `[TEXT]code`
+    - table: `problem_public_test`, `problem_private_test`, `problem_generated_test`
+      - primary key: `problem_id`, `input`, `output`
+      - columns: `[INT]problem_id`, `[TEXT]input`, `[TEXT]output`
+2. 🏗️ `ccpy1_2_make_dataset.py` - `ccpy1_1_convert_riegeli2py.py` 결과물을 이용해 데이터셋 정제
+  - Input File: `lyk/archive/data/ccpy1_raw.db`
+  - Output File: `lyk/archive/data/ccpy1_dataset.db`
+    - table: `train`, `valid`, `test`
+      - primary key: `problem_id`, `correct_id`
+      - columns: `[INT]problem_id`, `[INT]correct_id`, `[TEXT]description`, `[TEXT]code`, `[TEXT]input`, `[TEXT]output`
