@@ -85,6 +85,9 @@ def main():
   # * 폴더 생성
   os.makedirs(output_dir, exist_ok=True)
 
+  plt.rcParams['font.size'] = 16
+
+
   # * 보고서 생성: AC, TLE, WA, RE, CE 비율
   gpt1_4_make_report_ratio(
     execute_text_db_path=execute_text_db_path,
@@ -323,7 +326,7 @@ def gpt1_4_make_report_line_distribution(
     ]
     x = np.arange(len(data))
     plt.bar(x, data)
-    plt.xticks(x, ('<10', '<20', '<30', '<40', '<50', '<60', '<70', '<80', '<90', '<100', '>=100'))
+    plt.xticks(x, ('<10', '<20', '<30', '<40', '<50', '<60', '<70', '<80', '<90', '<100', '>='))
     plt.ylabel('Count')
     plt.title('Script: GPT-1-4({})\nincorrect_code line distribution (count: {} / avg_line: {:.2f})\n'.format(pair_file_name, line_count, line_total / line_count))
     plt.text(0, line_lt_10, '{:.2f}%\n({})'.format(line_lt_10 / line_total * 100, line_lt_10), ha='center', va='bottom')

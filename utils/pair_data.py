@@ -71,6 +71,9 @@ class PDCodeV1:
   def to_code(self) -> str:
     return '\n'.join([code for _, code in self.data])
   
+  def to_plain_code(self) -> str:
+    return ''.join([code for _, code in self.data])
+  
   def change_line(self, line_no: int, code: str) -> 'PDCode':
     # Check line_no
     if line_no < 1 or line_no > len(self.data):
